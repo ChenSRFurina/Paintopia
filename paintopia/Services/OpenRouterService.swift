@@ -8,6 +8,7 @@ class OpenRouterService: ObservableObject {
     init() {
         // 从配置文件获取 API key
         self.apiKey = APIConfig.getOpenRouterAPIKey()
+        print("[DEBUG] OpenRouter API Key:", self.apiKey)
     }
     
     /// 用于建议区：分析画面并给出后续绘画建议
@@ -43,7 +44,7 @@ class OpenRouterService: ObservableObject {
         request.setValue("paintopia-app", forHTTPHeaderField: "HTTP-Referer")
         
         let requestBody: [String: Any] = [
-            "model": "qwen/qwen2.5-vl-72b-instruct:free",
+            "model": "qwen/qwen2.5-vl-72b-instruct",
             "messages": [
                 [
                     "role": "user",

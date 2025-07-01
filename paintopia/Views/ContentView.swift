@@ -11,7 +11,7 @@ struct ContentView: View {
                         .environmentObject(navigationManager)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if navigationManager.currentPage == .generation {
-                    GenerationView(prompt: "请用卡通风格画出这幅画。")
+                    GenerationView(image: UIImage(systemName: "photo") ?? UIImage())
                 }
             }
             .navigationTitle("paintopia")

@@ -7,7 +7,7 @@ struct Suggestion: Identifiable {
 }
 
 struct SuggestionView: View {
-    @StateObject private var openRouterService = OpenRouterService()
+    @StateObject private var aigcService = AIGCService()
     @State private var aiSuggestion: String = ""
     @State private var isLoading: Bool = false
     @State private var errorMessage: String = ""
@@ -136,9 +136,9 @@ struct SuggestionView: View {
         aiSuggestion = ""
         onAIStatusChange(.loading)
         
-        openRouterService.analyzeImageForSuggestion(screenshot) { result in
+        let prompt = "请分析这个绘画画面，并提供约30字的后续绘画建议。建议应该具体、实用，帮助用户继续完善这幅画。"
+        aigcService.analyzeImageWithGPT4(image: screenshot, prompt: prompt) { result in
             isLoading = false
-            
             switch result {
             case .success(let suggestion):
                 aiSuggestion = suggestion

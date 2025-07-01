@@ -130,9 +130,7 @@ struct MainView: View {
             .navigationBarTitleDisplayMode(.inline)
             // 跳转到绘本生成页面
             .fullScreenCover(isPresented: $showGenerationView) {
-                // 自动生成中文 prompt，可根据实际需求替换
-                let defaultPrompt = "请用卡通风格画出这幅画。"
-                GenerationView(prompt: defaultPrompt)
+                GenerationView(image: generationImage ?? UIImage(systemName: "photo") ?? UIImage())
             }
         }
         .navigationViewStyle(StackNavigationViewStyle())

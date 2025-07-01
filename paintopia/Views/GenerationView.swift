@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct GenerationView: View {
-    let prompt: String
+    let image: UIImage
     @State private var generatedImage: UIImage? = nil
     @State private var story: String = ""
     @State private var isLoading: Bool = true
@@ -56,30 +56,47 @@ struct GenerationView: View {
     }
     
     private func generateWithDalleAndStory() {
+        let aigc = AIGCService()
         let dalle = DalleService()
         isLoading = true
         errorMessage = ""
-        // 1. 用 prompt 生成图片
-        dalle.generateImage(prompt: prompt) { result in
-            switch result {
-            case .success(let imageUrl):
-                downloadImage(from: imageUrl) { img in
-                    if let img = img {
-                        self.generatedImage = img
-                        // 2. 用生成图片生成故事
-                        let vlmService = OpenRouterService()
-                        vlmService.analyzeImageForStory(img) { storyResult in
-                            isLoading = false
-                            switch storyResult {
-                            case .success(let text):
-                                story = text
-                            case .failure(let error):
-                                errorMessage = error.localizedDescription
+        // debug: 打印图片信息
+        print("[DEBUG] GenerationView image size:", image.size)
+        if let data = image.jpegData(compressionQuality: 0.8) {
+            print("[DEBUG] GenerationView image base64 length:", data.base64EncodedString().count)
+        } else {
+            print("[DEBUG] GenerationView image jpegData 失败")
+        }
+        // 1. 先识别原始画布图片，总结画了什么
+        aigc.analyzeImageWithGPT4(image: self.image, prompt: "请用一句话总结这幅画的主要内容。") { summaryResult in
+            switch summaryResult {
+            case .success(let summary):
+                // 拼接卡通绘本风格
+                let cartoonPrompt = "请用卡通绘本风格画出：" + summary
+                dalle.generateImage(prompt: cartoonPrompt) { result in
+                    switch result {
+                    case .success(let imageUrl):
+                        downloadImage(from: imageUrl) { img in
+                            if let img = img {
+                                self.generatedImage = img
+                                // 3. 用生成图片生成故事
+                                aigc.analyzeImageWithGPT4(image: img, prompt: "请根据画面生成一个小故事。") { storyResult in
+                                    isLoading = false
+                                    switch storyResult {
+                                    case .success(let text):
+                                        story = text
+                                    case .failure(let error):
+                                        errorMessage = error.localizedDescription
+                                    }
+                                }
+                            } else {
+                                isLoading = false
+                                errorMessage = "下载 DALL·E 3 生成图片失败"
                             }
                         }
-                    } else {
+                    case .failure(let error):
                         isLoading = false
-                        errorMessage = "下载 DALL·E 3 生成图片失败"
+                        errorMessage = error.localizedDescription
                     }
                 }
             case .failure(let error):
@@ -109,5 +126,5 @@ struct GenerationView: View {
 }
 
 #Preview {
-    GenerationView(prompt: "flying cat in the rainbow")
+    GenerationView(image: UIImage(systemName: "photo") ?? UIImage())
 } 
