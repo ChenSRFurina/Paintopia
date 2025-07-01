@@ -1,0 +1,100 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "项目初始化与多端适配配置",
+        "description": "创建SwiftUI项目并配置iOS 15+、macOS 12+和Mac Catalyst支持，建立基础文件结构",
+        "details": "1. 使用Xcode创建新的SwiftUI项目，设置最低版本iOS 15.0和macOS 12.0\n2. 启用Mac Catalyst支持，配置Info.plist\n3. 创建文件夹结构：Views/、Models/、Services/、Utils/\n4. 配置项目设置：Bundle ID、Team、Signing\n5. 添加基础依赖和框架引用\n6. 设置多端适配的基础配置文件\n\n```swift\n// ContentView.swift\nstruct ContentView: View {\n    var body: some View {\n        NavigationView {\n            Text(\"Drawing App\")\n        }\n        .navigationViewStyle(StackNavigationViewStyle())\n    }\n}\n```",
+        "testStrategy": "验证项目在iPad、iPhone和Mac Catalyst上能正常启动，检查文件结构是否正确创建，确认多端编译无错误",
+        "priority": "high",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 2,
+        "title": "首页布局与导航结构搭建",
+        "description": "实现首页三栏布局（工具栏、画板、智能建议区）和基础导航结构",
+        "details": "1. 创建MainView作为主容器\n2. 实现三栏布局：左侧工具栏、中间画板区域、右侧智能建议区\n3. 添加画布下方的生成按钮\n4. 配置响应式布局，适配不同屏幕尺寸\n5. 创建导航到生成页面的路由\n\n```swift\n// Views/MainView.swift\nstruct MainView: View {\n    var body: some View {\n        HStack(spacing: 0) {\n            ToolbarView()\n                .frame(width: 80)\n            \n            VStack {\n                CanvasView()\n                GenerateButton()\n                    .padding()\n            }\n            \n            SuggestionView()\n                .frame(width: 300)\n        }\n    }\n}\n```",
+        "testStrategy": "测试布局在不同设备上的显示效果，验证响应式布局是否正确，确认导航功能正常工作",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 3,
+        "title": "自定义Canvas画板基础功能实现",
+        "description": "开发自定义Canvas组件，支持基础绘画功能（画笔、橡皮、撤销等）",
+        "details": "1. 创建CanvasView使用UIViewRepresentable包装UIView\n2. 实现基础绘画功能：画笔绘制、橡皮擦除、撤销/重做\n3. 支持触摸事件处理和路径绘制\n4. 添加画笔大小和颜色选择\n5. 实现画布内容截图功能供AI分析使用\n\n```swift\n// Views/CanvasView.swift\nstruct CanvasView: UIViewRepresentable {\n    @Binding var paths: [DrawingPath]\n    \n    func makeUIView(context: Context) -> DrawingCanvas {\n        let canvas = DrawingCanvas()\n        canvas.delegate = context.coordinator\n        return canvas\n    }\n    \n    func updateUIView(_ uiView: DrawingCanvas, context: Context) {\n        uiView.paths = paths\n    }\n    \n    func makeCoordinator() -> Coordinator {\n        Coordinator(self)\n    }\n}\n```",
+        "testStrategy": "测试绘画功能的流畅性和响应性，验证撤销/重做功能，确认画布截图功能正常工作，测试多点触控支持",
+        "priority": "high",
+        "dependencies": [
+          2
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 4,
+        "title": "智能建议区UI与定时刷新机制",
+        "description": "实现右侧智能建议区界面和定时截取画布内容的机制",
+        "details": "1. 创建SuggestionView显示AI建议内容\n2. 实现定时器机制，每5-10秒截取画布内容\n3. 添加加载状态和错误处理UI\n4. 实现建议内容的滚动显示\n5. 添加手动刷新功能\n\n```swift\n// Views/SuggestionView.swift\nstruct SuggestionView: View {\n    @StateObject private var suggestionService = SuggestionService()\n    @State private var timer: Timer?\n    \n    var body: some View {\n        VStack(alignment: .leading) {\n            Text(\"AI建议\")\n                .font(.headline)\n            \n            ScrollView {\n                LazyVStack(alignment: .leading) {\n                    ForEach(suggestionService.suggestions) { suggestion in\n                        SuggestionCard(suggestion: suggestion)\n                    }\n                }\n            }\n        }\n        .onAppear {\n            startTimer()\n        }\n    }\n}\n```",
+        "testStrategy": "验证定时器正常工作，测试UI响应性和滚动性能，确认加载状态正确显示，测试手动刷新功能",
+        "priority": "medium",
+        "dependencies": [
+          3
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 5,
+        "title": "LLM/VLM API服务对接",
+        "description": "实现与后端LLM/VLM服务的API对接，支持画面理解和智能建议生成",
+        "details": "1. 创建APIService处理网络请求\n2. 实现图像上传和VLM画面理解接口\n3. 集成LLM建议生成API\n4. 添加错误处理和重试机制\n5. 初期使用mock数据，后期切换到实际API\n6. 实现请求缓存和优化\n\n```swift\n// Services/APIService.swift\nclass APIService: ObservableObject {\n    private let baseURL = \"https://api.example.com\"\n    \n    func analyzeImage(_ image: UIImage) async throws -> ImageAnalysis {\n        let imageData = image.jpegData(compressionQuality: 0.8)\n        // API调用实现\n    }\n    \n    func generateSuggestions(analysis: ImageAnalysis) async throws -> [Suggestion] {\n        // LLM API调用实现\n    }\n}\n```",
+        "testStrategy": "测试API调用的成功率和响应时间，验证错误处理机制，确认mock数据和实际API的切换功能，测试网络异常情况下的应用稳定性",
+        "priority": "medium",
+        "dependencies": [
+          4
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 6,
+        "title": "生成页面动画与绘本展示功能",
+        "description": "实现生成页面，支持动画播放和绘本翻页查看功能",
+        "details": "1. 创建GenerationView作为生成页面主容器\n2. 实现动画播放器组件，支持播放控制\n3. 创建绘本阅读器，支持翻页效果\n4. 添加动画和绘本的切换标签\n5. 实现内容加载和生成状态显示\n6. 初期使用占位内容，后期对接实际生成服务\n\n```swift\n// Views/GenerationView.swift\nstruct GenerationView: View {\n    @State private var selectedTab = 0\n    @StateObject private var generationService = GenerationService()\n    \n    var body: some View {\n        VStack {\n            Picker(\"Content Type\", selection: $selectedTab) {\n                Text(\"动画\").tag(0)\n                Text(\"绘本\").tag(1)\n            }\n            .pickerStyle(SegmentedPickerStyle())\n            \n            if selectedTab == 0 {\n                AnimationPlayerView()\n            } else {\n                BookReaderView()\n            }\n        }\n    }\n}\n```",
+        "testStrategy": "测试动画播放的流畅性，验证绘本翻页效果，确认标签切换功能正常，测试加载状态和错误处理",
+        "priority": "medium",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 7,
+        "title": "导出下载功能与兼容性优化",
+        "description": "实现绘本PDF/图片集导出下载功能，并进行多端兼容性优化",
+        "details": "1. 实现PDF生成功能，支持绘本内容导出\n2. 添加图片集打包下载功能\n3. 集成系统分享功能（UIActivityViewController）\n4. 优化多端适配，确保iPad和Mac Catalyst体验一致\n5. 添加文件保存到相册或文档目录\n6. 性能优化和内存管理\n\n```swift\n// Services/ExportService.swift\nclass ExportService {\n    func exportToPDF(pages: [BookPage]) -> URL? {\n        let pdfRenderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 612, height: 792))\n        \n        let url = getDocumentsDirectory().appendingPathComponent(\"storybook.pdf\")\n        \n        try? pdfRenderer.writePDF(to: url) { context in\n            for page in pages {\n                context.beginPage()\n                // 渲染页面内容\n            }\n        }\n        \n        return url\n    }\n}\n```",
+        "testStrategy": "测试PDF生成质量和文件大小，验证分享功能在不同平台上的表现，确认文件保存权限和路径正确，测试大文件导出的性能表现",
+        "priority": "medium",
+        "dependencies": [
+          6
+        ],
+        "status": "pending",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-07-01T07:21:31.073Z",
+      "updated": "2025-07-01T11:41:20.308Z",
+      "description": "Tasks for master context"
+    }
+  }
+}
