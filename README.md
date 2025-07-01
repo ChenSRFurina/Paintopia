@@ -1,97 +1,104 @@
 # Paintopia 🎨
 
-一个支持 iOS 15+ 和 macOS 12+ 的多端绘画与绘本生成软件，集成了 AI 智能分析功能。
+> 多端自由绘画 × AI 智能分析 × 卡通绘本生成
 
-## ✨ 主要功能
+---
 
-- **多端支持**: iOS 15+ 和 macOS 12+ 跨平台
-- **自由绘画**: 支持多种颜色和笔刷大小
-- **智能橡皮擦**: 精确擦除绘画内容
-- **AI 分析**: 使用 Qwen2.5-VL 模型分析绘画并提供建议
-- **响应式布局**: 完美适配 iPad 横屏和 Mac 窗口
+## ✨ 项目简介
+
+Paintopia 是一款支持 **iOS 15+** 和 **macOS 12+** 的 SwiftUI 跨端绘画与智能绘本生成软件。
+
+- **自由绘画**：多色多笔刷、橡皮擦、撤销、响应式画布
+- **AI 智能建议**：一键截图，AI 分析画面并给出创作建议
+- **卡通绘本生成**：AI 总结画面内容，自动生成卡通风格图片和故事文本
+- **多端适配**：iPhone、iPad、Mac Catalyst 全面支持
+
+---
+
+## 🖼️ 主要功能
+
+- **三栏主界面**：左侧工具栏、中间画布、右侧建议区
+- **画布截图**：一键截取当前画布内容，顶部缩略图预览
+- **AI 建议区**：调用 GPT-4o 多模态模型，分析画面并给出约30字建议
+- **生成绘本**：
+  1. 画布截图 → AI 总结内容
+  2. 用总结内容+卡通风格 prompt 生成 DALL·E 3 图片
+  3. 再用新图片生成故事文本
+  4. 页面展示生成图片和故事
+- **错误与状态提示**：全流程 loading、错误、成功提示，用户体验友好
+
+---
 
 ## 🚀 快速开始
 
 ### 1. 克隆项目
 ```bash
-git clone <repository-url>
-cd paintopia
+git clone https://github.com/ChenSRFurina/Paintopia.git
+cd Paintopia
 ```
 
-### 2. 配置 AI 功能（可选）
-```bash
-./setup_api.sh
-```
+### 2. 配置 AI API Key
+- 支持 .env、Info.plist、环境变量多种方式
+- 推荐在根目录创建 `.env` 文件：
+  ```
+  AIGC_API_KEY=你的AIGC多模态API key
+  DALLE_API_KEY=你的DALL·E 3 API key
+  ```
+- 详细配置见 [API_SETUP.md](API_SETUP.md)
 
 ### 3. 打开项目
 ```bash
 open paintopia.xcodeproj
 ```
 
-### 4. 运行应用
-选择目标设备（iPhone、iPad 或 Mac）并运行项目。
+### 4. 运行
+- 选择 iOS/macOS 目标设备，点击运行
+- 体验自由绘画、AI 智能建议与绘本生成
 
-## 🤖 AI 功能配置
-
-Paintopia 集成了 OpenRouter 的 Qwen2.5-VL 视觉语言模型，可以为你的绘画提供智能建议。
-
-### 配置方式
-
-1. **快速配置**: 运行 `./setup_api.sh`
-2. **手动配置**: 参考 [API_SETUP.md](API_SETUP.md)
-3. **环境变量**: 在 Xcode 中设置 `OPENROUTER_API_KEY`
-
-### 使用 AI 功能
-
-1. 在绘画界面进行创作
-2. 点击右侧"截图分析"按钮
-3. AI 将分析你的绘画并提供约30字的改进建议
-
-## 📱 界面布局
-
-- **左侧**: 工具栏（颜色选择、笔刷大小、橡皮擦）
-- **中间**: 画布区域（自由绘画）
-- **右侧**: 智能建议区（AI 分析结果）
+---
 
 ## 🛠️ 技术栈
+- **SwiftUI** 跨端开发
+- **UIKit** 局部渲染与截图
+- **AIGC GPT-4o** 多模态 API（图片+文本分析）
+- **DALL·E 3** 文生图 API
+- **MVVM 架构**
 
-- **框架**: SwiftUI
-- **平台**: iOS 15+, macOS 12+
-- **AI 模型**: Qwen2.5-VL (通过 OpenRouter)
-- **架构**: MVVM
+---
 
-## 📁 项目结构
-
+## 📁 目录结构
 ```
 paintopia/
-├── Views/           # 视图组件
+├── Views/           # 视图组件（主界面、画布、建议区、生成页等）
 ├── Models/          # 数据模型
-├── Services/        # 服务层（AI API）
-├── Config/          # 配置文件
-├── Utils/           # 工具类
+├── Services/        # AI 服务（AIGC、DALL·E 3 等）
+├── Config/          # 配置文件与 API Key 读取
+├── Utils/           # 工具类（环境变量、截图等）
 └── Assets.xcassets/ # 资源文件
 ```
 
-## 🔧 开发
+---
 
-### 环境要求
-- Xcode 14.0+
-- iOS 15.0+ / macOS 12.0+
-- Swift 5.7+
+## ⚡ 特色亮点
+- **AI 智能建议与生成**：全流程自动化，支持多模态理解与创作
+- **卡通绘本风格**：生成图片始终为卡通绘本风格，适合儿童与创意场景
+- **极简配置**：API Key 支持多种方式，开发/生产环境灵活切换
+- **高可扩展性**：支持自定义 prompt、模型切换、更多 AI 服务集成
 
-### 构建
-```bash
-xcodebuild -project paintopia.xcodeproj -scheme paintopia build
-```
+---
 
-## 📄 许可证
+## 📝 开发者须知
+- 推荐 Xcode 14.0+，Swift 5.7+
+- 画布截图与建议区用到 ImageRenderer，需 iOS 16+/macOS 13+
+- 详细 API 配置与常见问题见 [API_SETUP.md](API_SETUP.md)
+- 代码结构清晰，便于二次开发与功能扩展
 
-MIT License
+---
 
-## 🤝 贡献
+## 📮 联系与贡献
+- 欢迎 issue/PR 反馈建议与 bug
+- 适合 AI 创意绘画、儿童教育、AI 绘本创作等场景
 
-欢迎提交 Issue 和 Pull Request！
+---
 
-## 📞 支持
-
-如有问题，请查看 [API_SETUP.md](API_SETUP.md) 或提交 Issue。 
+> Paintopia —— 让每个人都能用 AI 创作属于自己的卡通绘本！ 
