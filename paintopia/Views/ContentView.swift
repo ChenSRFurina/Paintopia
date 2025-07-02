@@ -1,3 +1,6 @@
+// 主内容视图控制器
+// 管理应用的主要导航和页面切换
+
 import SwiftUI
 
 struct ContentView: View {

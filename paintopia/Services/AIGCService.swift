@@ -1,3 +1,6 @@
+// AI生成内容服务
+// 提供多模态图片+文本分析功能
+
 import Foundation
 import UIKit
 

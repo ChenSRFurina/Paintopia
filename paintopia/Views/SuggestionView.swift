@@ -1,3 +1,6 @@
+// 右侧AI建议视图
+// 提供截图分析和AI绘画建议功能
+
 import SwiftUI
 
 struct Suggestion: Identifiable {

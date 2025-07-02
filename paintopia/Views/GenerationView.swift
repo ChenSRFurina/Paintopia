@@ -1,3 +1,6 @@
+// 绘本生成视图
+// 将画布内容转换为卡通绘本图片和故事
+
 import SwiftUI
 
 struct GenerationView: View {

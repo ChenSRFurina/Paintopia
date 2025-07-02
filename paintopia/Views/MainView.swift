@@ -1,3 +1,6 @@
+// 主界面视图，包含三栏布局
+// 左侧工具栏、中间画布、右侧AI建议区
+
 import SwiftUI
 
 enum AISuggestionStatus {

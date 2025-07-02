@@ -1,3 +1,6 @@
+// Replicate AI服务
+// 提供图片上传和AI模型调用功能
+
 import Foundation
 import UIKit
 

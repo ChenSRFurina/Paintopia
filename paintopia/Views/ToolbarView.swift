@@ -1,3 +1,6 @@
+// 左侧工具栏视图
+// 提供画笔、橡皮擦、颜色、粗细、撤销等工具
+
 import SwiftUI
 
 struct ToolbarView: View {

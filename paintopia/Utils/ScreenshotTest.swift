@@ -1,3 +1,6 @@
+// 截图测试工具
+// 提供画布截图和保存功能
+
 import SwiftUI
 
 @MainActor

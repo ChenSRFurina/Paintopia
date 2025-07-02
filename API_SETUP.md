@@ -1,4 +1,6 @@
 # Paintopia API 设置指南
+// API配置指南文档
+// 详细说明如何配置各种AI服务的API密钥
 
 ## OpenRouter API 配置
 

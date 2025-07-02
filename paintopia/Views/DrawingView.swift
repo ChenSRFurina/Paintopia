@@ -1,3 +1,6 @@
+// 绘画视图占位符
+// 预留的绘画页面组件
+
 import SwiftUI
 
 struct DrawingView: View {

@@ -1,3 +1,6 @@
+// 配置验证器
+// 验证API密钥配置的有效性
+
 import Foundation
 
 struct ConfigValidator {

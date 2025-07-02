@@ -1,3 +1,6 @@
+// 生成按钮组件
+// 通用的生成操作按钮
+
 import SwiftUI
 
 struct GenerateButton: View {

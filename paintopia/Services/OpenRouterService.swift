@@ -1,3 +1,6 @@
+// OpenRouter多模态AI服务
+// 使用Qwen2.5-VL模型进行图像分析
+
 import Foundation
 import UIKit
 

@@ -1,3 +1,6 @@
+// DALL·E 3图像生成服务
+// 调用DALL·E 3 API生成卡通绘本风格图片
+
 import Foundation
 
 class DalleService {

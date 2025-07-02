@@ -1,3 +1,6 @@
+// 画布视图，处理绘画交互
+// 支持自由绘画、橡皮擦、路径管理
+
 import SwiftUI
 
 struct PathSegment: Identifiable, Hashable {

@@ -1,3 +1,6 @@
+// 环境变量加载器
+// 从.env文件加载API密钥等配置
+
 import Foundation
 
 struct EnvLoader {

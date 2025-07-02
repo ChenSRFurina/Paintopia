@@ -1,3 +1,6 @@
+// 导航管理器
+// 管理应用页面间的导航状态
+
 import Foundation
 import SwiftUI
 
