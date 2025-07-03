@@ -14,13 +14,14 @@ struct ChatbotView: View {
         HStack(spacing: 0) {
             // 头像区域
             VStack {
-                Circle()
-                    .fill(Color.blue)
+                Image("avatar")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
                     .frame(width: 48, height: 48)
+                    .clipShape(Circle())
                     .overlay(
-                        Image(systemName: "person.crop.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(.white)
+                        Circle()
+                            .stroke(Color.blue, lineWidth: 2)
                     )
                     .padding(.top, 20)
                 Spacer()

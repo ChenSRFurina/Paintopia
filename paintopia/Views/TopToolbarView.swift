@@ -14,13 +14,10 @@ struct TopToolbarView: View {
         HStack(spacing: 0) {
             // 左侧Logo
             HStack {
-                Image(systemName: "paintpalette.fill")
-                    .foregroundColor(.purple)
-                    .font(.title2)
-                Text("画趣星球")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.purple)
+                Image("logo_name")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(height: 40)
             }
             .padding(.leading, 24)
             
@@ -30,9 +27,10 @@ struct TopToolbarView: View {
             HStack(spacing: 16) {
                 // 首页按钮
                 Button(action: onHome) {
-                    Image(systemName: "house.fill")
-                        .font(.title3)
-                        .foregroundColor(.primary)
+                    Image("icon_home")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 24, height: 24)
                 }
                 .buttonStyle(TopToolbarButtonStyle())
                 
@@ -42,33 +40,38 @@ struct TopToolbarView: View {
                         showChatbot.toggle() 
                     }
                 }) {
-                    Image(systemName: "message.fill")
-                        .font(.title3)
-                        .foregroundColor(showChatbot ? .white : .primary)
+                    Image("icon_chatbot")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 24, height: 24)
+                        .colorMultiply(showChatbot ? .white : .primary)
                 }
                 .buttonStyle(TopToolbarButtonStyle(isSelected: showChatbot))
                 
                 // 生成按钮
                 Button(action: onGenerate) {
-                    Image(systemName: "sparkles")
-                        .font(.title3)
-                        .foregroundColor(.primary)
+                    Image("icon_generate")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 24, height: 24)
                 }
                 .buttonStyle(TopToolbarButtonStyle())
                 
                 // 撤销按钮
                 Button(action: onUndo) {
-                    Image(systemName: "arrow.uturn.backward")
-                        .font(.title3)
-                        .foregroundColor(.primary)
+                    Image("icon_arrow_left")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 20, height: 20)
                 }
                 .buttonStyle(TopToolbarButtonStyle())
                 
                 // 重做按钮
                 Button(action: onRedo) {
-                    Image(systemName: "arrow.uturn.forward")
-                        .font(.title3)
-                        .foregroundColor(.primary)
+                    Image("icon_arrow_right")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 20, height: 20)
                 }
                 .buttonStyle(TopToolbarButtonStyle())
             }

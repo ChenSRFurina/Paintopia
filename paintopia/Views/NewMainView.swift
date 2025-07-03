@@ -19,16 +19,23 @@ struct NewMainView: View {
     
     var body: some View {
         ZStack {
-            // 渐变背景
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color(red: 0.97, green: 0.97, blue: 1.0),
-                    Color(red: 0.9, green: 0.92, blue: 1.0)
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            // 背景图片
+            Image("background")
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .ignoresSafeArea()
+                .overlay(
+                    // 半透明渐变覆盖层，保持原有的渐变效果
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            Color(red: 0.97, green: 0.97, blue: 1.0).opacity(0.8),
+                            Color(red: 0.9, green: 0.92, blue: 1.0).opacity(0.8)
+                        ]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .ignoresSafeArea()
+                )
             
             VStack(spacing: 0) {
                 // 顶部工具栏

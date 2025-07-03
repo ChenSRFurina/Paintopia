@@ -21,9 +21,11 @@ struct RightToolsView: View {
             Button(action: { 
                 isEraser = false 
             }) {
-                Image(systemName: "pencil")
-                    .font(.title2)
-                    .foregroundColor(isEraser ? .gray : .white)
+                Image("pen_1")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 24, height: 24)
+                    .colorMultiply(isEraser ? .gray : .white)
             }
             .frame(width: 48, height: 48)
             .background(isEraser ? Color.white : Color.blue)
@@ -38,9 +40,11 @@ struct RightToolsView: View {
             Button(action: { 
                 isEraser = true 
             }) {
-                Image(systemName: "eraser")
-                    .font(.title2)
-                    .foregroundColor(isEraser ? .white : .gray)
+                Image("eraser")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 24, height: 24)
+                    .colorMultiply(isEraser ? .white : .gray)
             }
             .frame(width: 48, height: 48)
             .background(isEraser ? Color.blue : Color.white)
