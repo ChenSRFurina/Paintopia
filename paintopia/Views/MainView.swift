@@ -3,13 +3,6 @@
 
 import SwiftUI
 
-enum AISuggestionStatus {
-    case idle
-    case loading
-    case success(String) // AI 建议
-    case failure(String) // 错误信息
-}
-
 struct MainView: View {
     @StateObject private var navigationManager = NavigationManager()
     @State private var currentColor: Color = .black
@@ -27,18 +20,32 @@ struct MainView: View {
         NavigationView {
             HStack(spacing: 0) {
                 // 左侧工具栏
-                ToolbarView(
-                    selectedColor: $currentColor,
-                    selectedLineWidth: $brushSize,
-                    isEraser: $isErasing,
-                    undoAction: {
-                        if !paths.isEmpty {
-                            paths.removeLast()
-                        }
+                VStack(spacing: 0) {
+                    // 左上角 paintopia 标志
+                    HStack {
+                        Image(systemName: "paintpalette.fill")
+                            .foregroundColor(.purple)
+                        Text("paintopia")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.purple)
                     }
-                )
-                .frame(width: 80)
-                .background(Color(.systemGray6))
+                    .padding(.top, 16)
+                    .padding(.bottom, 24)
+                    ToolbarView(
+                        selectedColor: $currentColor,
+                        selectedLineWidth: $brushSize,
+                        isEraser: $isErasing,
+                        undoAction: {
+                            if !paths.isEmpty {
+                                paths.removeLast()
+                            }
+                        }
+                    )
+                    .frame(width: 80)
+                    .background(Color(.systemGray6))
+                    Spacer()
+                }
                 
                 // 中间画布区域
                 ZStack(alignment: .top) {
@@ -129,8 +136,6 @@ struct MainView: View {
                 .frame(width: UIScreen.main.bounds.width * 0.25)
                 .background(Color(.systemBackground))
             }
-            .navigationTitle("Paintopia")
-            .navigationBarTitleDisplayMode(.inline)
             // 跳转到绘本生成页面
             .fullScreenCover(isPresented: $showGenerationView) {
                 GenerationView(image: generationImage ?? UIImage(systemName: "photo") ?? UIImage())
@@ -176,10 +181,8 @@ struct MainView: View {
         guard let img = renderer.uiImage else { return nil }
         self.screenshot = img
         self.showScreenshot = true
-        // 3秒后自动隐藏
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-            self.showScreenshot = false
-        }
+        // 立即隐藏截图预览，简化逻辑
+        self.showScreenshot = false
         return img
     }
     

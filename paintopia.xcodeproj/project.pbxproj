@@ -195,6 +195,9 @@
 			);
 			mainGroup = 9AE7A2032E13C003006052B0;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				9AB6A25F2E154AB80066F48F /* XCRemoteSwiftPackageReference "Starscream" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 9AE7A20D2E13C003006052B0 /* Products */;
 			projectDirPath = "";
@@ -560,6 +563,17 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		9AB6A25F2E154AB80066F48F /* XCRemoteSwiftPackageReference "Starscream" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/daltoniam/Starscream.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.0.8;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
 	};
 	rootObject = 9AE7A2042E13C003006052B0 /* Project object */;
 }
