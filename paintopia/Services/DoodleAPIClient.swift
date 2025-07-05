@@ -1,6 +1,15 @@
 import Foundation
 import UIKit
 
+// AI处理结果结构体
+struct AIProcessingResult {
+    let recognition: String     // AI识别结果
+    let suggestion: String      // AI建议
+    let story: String          // 生成的故事
+    let success: Bool          // 处理是否成功
+    let error: String?         // 错误信息（如果有）
+}
+
 enum APIError: LocalizedError {
     case invalidURL
     case invalidData
@@ -8,7 +17,6 @@ enum APIError: LocalizedError {
     case networkError(Error)
     case serverError(Int)
     case connectionRefused
-    case webSocketError(Error)
     
     var errorDescription: String? {
         switch self {
@@ -24,8 +32,6 @@ enum APIError: LocalizedError {
             return "服务器错误（\(code)）"
         case .connectionRefused:
             return "连接被拒绝"
-        case .webSocketError(let error):
-            return "WebSocket 错误：\(error.localizedDescription)"
         }
     }
 }
@@ -34,22 +40,14 @@ class DoodleAPIClient {
     static let shared = DoodleAPIClient()
     
     private let baseURL = "http://10.4.176.7:8000"
-    private let wsURL = "ws://10.4.176.7:8000/ws"
-    private var webSocketClient: QwenVLWebSocketClient?
     private let session: URLSession
     
     private init() {
         let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 30
+        config.timeoutIntervalForRequest = 60  // 增加超时时间，因为后端需要处理AI
         config.timeoutIntervalForResource = 300
         config.requestCachePolicy = .reloadIgnoringLocalCacheData
         session = URLSession(configuration: config)
-        
-        setupWebSocket()
-    }
-    
-    private func setupWebSocket() {
-        webSocketClient = QwenVLWebSocketClient(url: wsURL)
     }
     
     // 测试服务器连接
@@ -115,37 +113,15 @@ class DoodleAPIClient {
         }.resume()
     }
     
-    // WebSocket 连接测试
-    func testWebSocketConnection(completion: @escaping (Bool) -> Void) {
-        guard let webSocketClient = webSocketClient else {
-            print("错误：WebSocket 客户端未初始化")
-            completion(false)
-            return
-        }
+    // 上传涂鸦图片并获取AI处理结果
+    func uploadDoodle(imageData: Data, completion: @escaping (Result<AIProcessingResult, Error>) -> Void) {
+        // 生成唯一请求ID用于调试
+        let requestId = UUID().uuidString.prefix(8)
+        print("🚀 [请求\(requestId)] 开始上传涂鸦图片...")
         
-        print("正在测试 WebSocket 连接：\(wsURL)")
-        
-        webSocketClient.connect()
-        // 发送测试消息，使用 send(message:)，参数需加标签
-        let pingMessage: [String: Any] = ["action": "ping"]
-        webSocketClient.send(message: pingMessage) { error in
-            if let error = error {
-                print("ping 测试失败：\(error.localizedDescription)")
-                webSocketClient.disconnect()
-                completion(false)
-            } else {
-                print("收到 ping 响应")
-                webSocketClient.disconnect()
-                completion(true)
-            }
-        }
-    }
-    
-    // 上传涂鸦图片
-    func uploadDoodle(imageData: Data, completion: @escaping (Result<String, Error>) -> Void) {
-        let endpoint = "\(baseURL)/api/upload"
+        let endpoint = "\(baseURL)/api/image/analyze"
         guard let url = URL(string: endpoint) else {
-            print("错误：无效的URL - \(endpoint)")
+            print("❌ [请求\(requestId)] 无效的URL - \(endpoint)")
             completion(.failure(APIError.invalidURL))
             return
         }
@@ -153,68 +129,128 @@ class DoodleAPIClient {
         // 处理图片数据，确保正确的 alpha 通道
         guard let image = UIImage(data: imageData),
               let processedData = processImageForUpload(image) else {
-            print("错误：图片处理失败")
+            print("❌ [请求\(requestId)] 图片处理失败")
             completion(.failure(APIError.invalidData))
             return
         }
         
         // 将图片数据转换为 base64
         let base64String = processedData.base64EncodedString()
+        let base64Preview = String(base64String.prefix(50)) + "..."
+        print("📷 [请求\(requestId)] 图片处理完成，base64预览: \(base64Preview)")
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.cachePolicy = .reloadIgnoringLocalCacheData // 确保不使用缓存
         
-        let jsonBody: [String: Any] = ["image": base64String]
+        // 新接口body
+        var jsonBody: [String: Any] = [
+            "image_data": base64String,
+            "text": "请分析这幅画并给出建议"
+        ]
+        // 如果后续需要支持会话，可以这样加：
+        // if let sessionId = ... { jsonBody["session_id"] = sessionId }
         
         do {
             let jsonData = try JSONSerialization.data(withJSONObject: jsonBody)
             request.httpBody = jsonData
             
-            print("正在发送 JSON 请求...")
-            print("- URL：\(endpoint)")
-            print("- Content-Type：application/json")
-            print("- 请求体大小：\(jsonData.count) 字节")
+            print("📤 [请求\(requestId)] 正在发送API请求...")
+            print("   - URL：\(endpoint)")
+            print("   - Content-Type：application/json")
+            print("   - 请求体大小：\(jsonData.count) 字节")
+            print("   - 缓存策略：不使用缓存")
             
             session.dataTask(with: request) { data, response, error in
                 if let error = error {
-                    print("上传错误：\(error.localizedDescription)")
+                    print("❌ [请求\(requestId)] 网络错误：\(error.localizedDescription)")
                     completion(.failure(APIError.networkError(error)))
                     return
                 }
                 
                 guard let httpResponse = response as? HTTPURLResponse else {
-                    print("错误：未收到 HTTP 响应")
+                    print("❌ [请求\(requestId)] 未收到 HTTP 响应")
                     completion(.failure(APIError.invalidResponse))
                     return
                 }
                 
-                print("服务器响应状态码：\(httpResponse.statusCode)")
+                print("📡 [请求\(requestId)] 服务器响应状态码：\(httpResponse.statusCode)")
                 
                 guard let data = data else {
-                    print("错误：未收到响应数据")
+                    print("❌ [请求\(requestId)] 未收到响应数据")
                     completion(.failure(APIError.invalidData))
                     return
                 }
                 
+                if let responseString = String(data: data, encoding: .utf8) {
+                    print("📥 [请求\(requestId)] 服务器响应内容：\(responseString)")
+                }
+                
                 do {
                     if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                        if let result = json["result"] as? String {
-                            print("识别结果：\(result)")
+                        // 检查是否有错误
+                        if let errorMessage = json["error"] as? String {
+                            print("❌ [请求\(requestId)] 服务器错误：\(errorMessage)")
+                            completion(.failure(NSError(domain: "DoodleAPIClient", code: -1, userInfo: [NSLocalizedDescriptionKey: errorMessage])))
+                            return
+                        }
+                        
+                        // 检查是否是新格式（包含success字段）
+                        if json["success"] != nil {
+                            // 新格式：解析完整的AI处理结果
+                            let recognition = json["recognition"] as? String ?? ""
+                            let suggestion = json["suggestion"] as? String ?? ""
+                            let story = json["story"] as? String ?? ""
+                            let success = json["success"] as? Bool ?? false
+                            let error = json["error"] as? String
+                            
+                            let result = AIProcessingResult(
+                                recognition: recognition,
+                                suggestion: suggestion,
+                                story: story,
+                                success: success,
+                                error: error
+                            )
+                            
+                            print("✅ [请求\(requestId)] AI处理成功（新格式）")
+                            print("   - 识别：\(recognition)")
+                            print("   - 建议：\(suggestion)")
+                            print("   - 故事长度：\(story.count)字符")
+                            
                             completion(.success(result))
-                        } else if let error = json["error"] as? String {
-                            print("服务器错误：\(error)")
-                            completion(.failure(NSError(domain: "DoodleAPIClient", code: -1, userInfo: [NSLocalizedDescriptionKey: error])))
+                        } else if let oldResult = json["result"] as? String {
+                            // 旧格式：兼容处理，将result作为识别结果
+                            print("⚠️ [请求\(requestId)] 收到旧格式响应，进行兼容处理")
+                            
+                            // 生成简单的建议和故事
+                            let suggestion = "根据AI识别的内容，你可以尝试添加更多细节和色彩让画面更丰富。"
+                            let story = "基于你的画作，AI识别出：\(oldResult)\n\n这是一个很有创意的开始！继续发挥你的想象力，为这个作品添加更多元素吧。"
+                            
+                            let result = AIProcessingResult(
+                                recognition: oldResult,
+                                suggestion: suggestion,
+                                story: story,
+                                success: true,
+                                error: nil
+                            )
+                            
+                            print("✅ [请求\(requestId)] AI处理成功（兼容模式）")
+                            print("   - 识别：\(oldResult)")
+                            print("   - 建议：\(suggestion)")
+                            print("   - 故事长度：\(story.count)字符")
+                            
+                            completion(.success(result))
                         } else {
-                            print("错误：无效的响应格式")
+                            print("❌ [请求\(requestId)] 无效的响应格式，JSON: \(json)")
                             completion(.failure(APIError.invalidData))
                         }
                     } else {
-                        print("错误：无法解析 JSON 响应")
+                        print("❌ [请求\(requestId)] 无法解析 JSON 响应")
                         completion(.failure(APIError.invalidData))
                     }
                 } catch {
-                    print("JSON 解析错误：\(error.localizedDescription)")
+                    print("❌ [请求\(requestId)] JSON 解析错误：\(error.localizedDescription)")
                     completion(.failure(APIError.invalidData))
                 }
             }.resume()
@@ -222,118 +258,6 @@ class DoodleAPIClient {
             print("JSON 编码错误：\(error.localizedDescription)")
             completion(.failure(APIError.invalidData))
         }
-    }
-    
-    // 通过 WebSocket 发送图片进行识别
-    func recognizeImageViaWebSocket(imageData: Data, completion: @escaping (Result<String, Error>) -> Void) {
-        guard let webSocketClient = webSocketClient else {
-            completion(.failure(APIError.invalidData))
-            return
-        }
-        
-        // 处理图片数据
-        guard let image = UIImage(data: imageData),
-              let processedData = processImageForUpload(image) else {
-            completion(.failure(APIError.invalidData))
-            return
-        }
-        
-        // 转换为 base64
-        let base64String = processedData.base64EncodedString()
-        
-        // 设置 WebSocket 代理
-        let delegate = ImageRecognitionDelegate(completion: completion)
-        webSocketClient.delegate = delegate
-        
-        // 发送识别请求（只传递 base64String 和一个 error 回调，不要多余闭包）
-        webSocketClient.sendImageForRecognition(base64String) { error in
-            if let error = error {
-                completion(.failure(APIError.webSocketError(error)))
-            }
-            // 如果 error == nil，说明消息已成功发送，等待 delegate 回调即可，这里无需再调用 completion
-        }
-    }
-    
-    // 检查任务状态
-    func checkStatus(taskId: String, completion: @escaping (Result<String, Error>) -> Void) {
-        let endpoint = "\(baseURL)/api/status/\(taskId)"
-        guard let url = URL(string: endpoint) else {
-            completion(.failure(APIError.invalidURL))
-            return
-        }
-        
-        var request = URLRequest(url: url)
-        request.cachePolicy = .reloadIgnoringLocalCacheData
-        
-        print("正在检查任务状态：\(endpoint)")
-        
-        session.dataTask(with: request) { data, response, error in
-            if let error = error {
-                completion(.failure(APIError.networkError(error)))
-                return
-            }
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
-                completion(.failure(APIError.invalidResponse))
-                return
-            }
-            
-            print("状态检查响应码：\(httpResponse.statusCode)")
-            
-            if httpResponse.statusCode >= 400 {
-                completion(.failure(APIError.serverError(httpResponse.statusCode)))
-                return
-            }
-            
-            guard let data = data,
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let status = json["status"] as? String else {
-                completion(.failure(APIError.invalidData))
-                return
-            }
-            
-            completion(.success(status))
-        }.resume()
-    }
-    
-    // 获取生成结果
-    func getResult(taskId: String, completion: @escaping (Result<Data, Error>) -> Void) {
-        let endpoint = "\(baseURL)/api/result/\(taskId)"
-        guard let url = URL(string: endpoint) else {
-            completion(.failure(APIError.invalidURL))
-            return
-        }
-        
-        var request = URLRequest(url: url)
-        request.cachePolicy = .reloadIgnoringLocalCacheData
-        
-        print("正在获取结果：\(endpoint)")
-        
-        session.dataTask(with: request) { data, response, error in
-            if let error = error {
-                completion(.failure(APIError.networkError(error)))
-                return
-            }
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
-                completion(.failure(APIError.invalidResponse))
-                return
-            }
-            
-            print("获取结果响应码：\(httpResponse.statusCode)")
-            
-            if httpResponse.statusCode >= 400 {
-                completion(.failure(APIError.serverError(httpResponse.statusCode)))
-                return
-            }
-            
-            guard let data = data else {
-                completion(.failure(APIError.invalidData))
-                return
-            }
-            
-            completion(.success(data))
-        }.resume()
     }
     
     // 处理图片上传的辅助方法
@@ -351,53 +275,4 @@ class DoodleAPIClient {
     }
 }
 
-// WebSocket 代理实现
-private class ImageRecognitionDelegate: WebSocketDelegate {
-    private let completion: (Result<String, Error>) -> Void
-    
-    init(completion: @escaping (Result<String, Error>) -> Void) {
-        self.completion = completion
-    }
-    
-    func didReceive(message: String) {
-        do {
-            if let data = message.data(using: .utf8),
-               let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                if let action = json["action"] as? String {
-                    switch action {
-                    case "qwenvl_image_recognition":
-                        if let result = json["result"] as? String {
-                            completion(.success(result))
-                        } else {
-                            completion(.failure(APIError.invalidData))
-                        }
-                    case "error":
-                        if let errorMessage = json["message"] as? String {
-                            completion(.failure(NSError(domain: "WebSocket", code: -1, userInfo: [NSLocalizedDescriptionKey: errorMessage])))
-                        } else {
-                            completion(.failure(APIError.invalidData))
-                        }
-                    default:
-                        completion(.failure(APIError.invalidData))
-                    }
-                }
-            }
-        } catch {
-            completion(.failure(error))
-        }
-    }
-    
-    func didConnect() {
-        print("WebSocket 已连接")
-    }
-    
-    func didDisconnect(error: Error?) {
-        if let error = error {
-            completion(.failure(APIError.webSocketError(error)))
-        }
-    }
-    
-    func didReconnect() {
-        print("WebSocket 已重新连接")
-    }
-} 
+ 

@@ -10,9 +10,9 @@ struct NewMainView: View {
     @State private var isErasing = false
     @State private var paths: [PathSegment] = []
     @State private var currentPath: PathSegment?
-    @State private var showChatbot = false
     @State private var showGenerationView = false
     @State private var generationImage: UIImage? = nil
+    @State private var isObservingCanvas = false
     
     // 画布引用，用于撤销/重做
     @State private var canvasRef: EnhancedCanvasView?
@@ -40,7 +40,7 @@ struct NewMainView: View {
             VStack(spacing: 0) {
                 // 顶部工具栏
                 TopToolbarView(
-                    showChatbot: $showChatbot,
+                    canGenerate: true,
                     onGenerate: handleGenerate,
                     onUndo: handleUndo,
                     onRedo: handleRedo,
@@ -49,16 +49,18 @@ struct NewMainView: View {
                 
                 // 主要区域
                 HStack(spacing: 0) {
-                    // 左侧聊天助手（可隐藏）
-                    if showChatbot {
-                        ChatbotView()
-                            .transition(.move(edge: .leading).combined(with: .opacity))
-                    }
+                    // 左侧聊天助手（始终显示）
+                    ChatbotView(canvasImage: .constant(nil), paths: $paths, isObservingCanvas: $isObservingCanvas)
                     
                     // 中间画布区域
                     VStack {
                         Spacer()
-                        
+                        if isObservingCanvas {
+                            Text("正在观察画布，请稍等...")
+                                .font(.caption)
+                                .foregroundColor(.orange)
+                                .padding(.bottom, 4)
+                        }
                         EnhancedCanvasView(
                             selectedColor: $currentColor,
                             selectedLineWidth: $brushSize,
@@ -70,7 +72,7 @@ struct NewMainView: View {
                         )
                         .frame(width: 800, height: 600)
                         .background(Color.clear)
-                        .padding(.leading, showChatbot ? 0 : 80) // 当没有聊天框时左边距
+                        .padding(.leading, 0)
                         
                         Spacer()
                     }
@@ -90,16 +92,26 @@ struct NewMainView: View {
         .fullScreenCover(isPresented: $showGenerationView) {
             GenerationView(image: generationImage ?? UIImage(systemName: "photo") ?? UIImage())
         }
-        .animation(.easeInOut(duration: 0.3), value: showChatbot)
     }
     
     // MARK: - 按钮处理函数
     
     private func handleGenerate() {
+        // 检查是否有绘画内容
+        if paths.isEmpty {
+            print("⚠️ 画布为空，但仍然允许尝试生成绘本")
+            // 注释掉return，允许用户尝试生成
+            // return
+        }
+        
+        print("🎨 开始截取画布内容，当前路径数: \(paths.count)")
         let img = takeCanvasScreenshot()
         if let img = img {
+            print("✅ 画布截图成功，图片大小: \(img.size)")
             self.generationImage = img
             self.showGenerationView = true
+        } else {
+            print("❌ 画布截图失败")
         }
     }
     

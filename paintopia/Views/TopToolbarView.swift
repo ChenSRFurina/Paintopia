@@ -4,7 +4,7 @@
 import SwiftUI
 
 struct TopToolbarView: View {
-    @Binding var showChatbot: Bool
+    let canGenerate: Bool
     let onGenerate: () -> Void
     let onUndo: () -> Void
     let onRedo: () -> Void
@@ -34,28 +34,16 @@ struct TopToolbarView: View {
                 }
                 .buttonStyle(TopToolbarButtonStyle())
                 
-                // 聊天助手按钮
-                Button(action: { 
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        showChatbot.toggle() 
-                    }
-                }) {
-                    Image("icon_chatbot")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 24, height: 24)
-                        .colorMultiply(showChatbot ? .white : .primary)
-                }
-                .buttonStyle(TopToolbarButtonStyle(isSelected: showChatbot))
-                
                 // 生成按钮
                 Button(action: onGenerate) {
                     Image("icon_generate")
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 24, height: 24)
+                        .colorMultiply(canGenerate ? .primary : .gray)
                 }
-                .buttonStyle(TopToolbarButtonStyle())
+                .buttonStyle(TopToolbarButtonStyle(isDisabled: !canGenerate))
+                .disabled(!canGenerate)
                 
                 // 撤销按钮
                 Button(action: onUndo) {
@@ -86,6 +74,7 @@ struct TopToolbarView: View {
             .padding(.trailing, 24)
         }
         .padding(.vertical, 10)
+        .padding(.top, 20)
         .background(
             Color.white.opacity(0.8)
                 .background(.ultraThinMaterial)
@@ -101,27 +90,30 @@ struct TopToolbarView: View {
 
 struct TopToolbarButtonStyle: ButtonStyle {
     let isSelected: Bool
+    let isDisabled: Bool
     
-    init(isSelected: Bool = false) {
+    init(isSelected: Bool = false, isDisabled: Bool = false) {
         self.isSelected = isSelected
+        self.isDisabled = isDisabled
     }
     
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .frame(width: 44, height: 44)
             .background(
-                isSelected ? Color.blue : 
-                (configuration.isPressed ? Color.gray.opacity(0.3) : Color.clear)
+                isDisabled ? Color.gray.opacity(0.1) :
+                (isSelected ? Color.blue : 
+                (configuration.isPressed ? Color.gray.opacity(0.3) : Color.clear))
             )
             .cornerRadius(8)
-            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+            .scaleEffect(configuration.isPressed && !isDisabled ? 0.95 : 1.0)
             .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
     }
 }
 
 #Preview {
     TopToolbarView(
-        showChatbot: .constant(false),
+        canGenerate: true,
         onGenerate: {},
         onUndo: {},
         onRedo: {},
