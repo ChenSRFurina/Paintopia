@@ -5,9 +5,29 @@ import Foundation
 import SwiftUI
 
 class NavigationManager: ObservableObject {
+    @Published var currentPage: Page = .drawing
+    
+    // TTS控制
+    @Published var isTTSEnabled: Bool = true
+    
     enum Page {
         case drawing
-        case generation
+        case storybook
+        case settings
     }
-    @Published var currentPage: Page = .drawing
+    
+    func disableTTS() {
+        isTTSEnabled = false
+        print("🔇 TTS已禁用")
+    }
+    
+    func enableTTS() {
+        isTTSEnabled = true
+        print("🔊 TTS已启用")
+    }
+    
+    func toggleTTS() {
+        isTTSEnabled.toggle()
+        print("🔊 TTS状态切换为: \(isTTSEnabled ? "启用" : "禁用")")
+    }
 } 

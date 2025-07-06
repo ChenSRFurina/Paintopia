@@ -34,16 +34,7 @@ struct TopToolbarView: View {
                 }
                 .buttonStyle(TopToolbarButtonStyle())
                 
-                // 生成按钮
-                Button(action: onGenerate) {
-                    Image("icon_generate")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 24, height: 24)
-                        .colorMultiply(canGenerate ? .primary : .gray)
-                }
-                .buttonStyle(TopToolbarButtonStyle(isDisabled: !canGenerate))
-                .disabled(!canGenerate)
+    
                 
                 // 撤销按钮
                 Button(action: onUndo) {

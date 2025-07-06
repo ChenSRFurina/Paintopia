@@ -14,6 +14,16 @@ struct NewMainView: View {
     @State private var generationImage: UIImage? = nil
     @State private var isObservingCanvas = false
     
+    // 绘本生成相关状态
+    @State private var isGeneratingStorybook = false
+    @State private var storybookStory = ""
+    @State private var storybookErrorMessage = ""
+    @State private var showStorybookView = false
+    @State private var storybookData: StorybookData?
+    
+    // 网络诊断相关状态
+    @State private var showNetworkDiagnostic = false
+    
     // 画布引用，用于撤销/重做
     @State private var canvasRef: EnhancedCanvasView?
     
@@ -39,18 +49,70 @@ struct NewMainView: View {
             
             VStack(spacing: 0) {
                 // 顶部工具栏
-                TopToolbarView(
-                    canGenerate: true,
-                    onGenerate: handleGenerate,
-                    onUndo: handleUndo,
-                    onRedo: handleRedo,
-                    onHome: handleHome
-                )
+                HStack {
+                    TopToolbarView(
+                        canGenerate: true,
+                        onGenerate: handleGenerate,
+                        onUndo: handleUndo,
+                        onRedo: handleRedo,
+                        onHome: handleHome
+                    )
+                    
+                    Spacer()
+                    
+                    // TTS控制按钮
+                    Button(action: {
+                        navigationManager.toggleTTS()
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: navigationManager.isTTSEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill")
+                                .font(.system(size: 14))
+                            Text(navigationManager.isTTSEnabled ? "TTS开" : "TTS关")
+                                .font(.caption)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(navigationManager.isTTSEnabled ? Color.green.opacity(0.1) : Color.red.opacity(0.1))
+                        .foregroundColor(navigationManager.isTTSEnabled ? .green : .red)
+                        .cornerRadius(6)
+                    }
+                    .padding(.trailing, 8)
+                    
+                    // 网络诊断按钮
+                    Button(action: {
+                        showNetworkDiagnostic = true
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "network")
+                                .font(.system(size: 14))
+                            Text("网络诊断")
+                                .font(.caption)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.blue.opacity(0.1))
+                        .foregroundColor(.blue)
+                        .cornerRadius(6)
+                    }
+                    .padding(.trailing, 16)
+                }
                 
                 // 主要区域
                 HStack(spacing: 0) {
                     // 左侧聊天助手（始终显示）
                     ChatbotView(canvasImage: .constant(nil), paths: $paths, isObservingCanvas: $isObservingCanvas)
+                        .environmentObject(navigationManager)
+                        .onChange(of: isGeneratingStorybook) { newValue in
+                            // 当绘本生成状态改变时，控制TTS
+                            print("📚 绘本生成状态改变: \(newValue ? "开始生成" : "生成完成")")
+                            if newValue {
+                                print("🔇 绘本生成期间，禁用TTS以避免干扰")
+                                navigationManager.disableTTS()
+                            } else {
+                                print("🔊 绘本生成完成，TTS功能恢复正常")
+                                navigationManager.enableTTS()
+                            }
+                        }
                     
                     // 中间画布区域
                     VStack {
@@ -74,6 +136,48 @@ struct NewMainView: View {
                         .background(Color.clear)
                         .padding(.leading, 0)
                         
+                        // 绘本生成按钮区域
+                        VStack(spacing: 12) {
+                            if isGeneratingStorybook {
+                                HStack {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                    Text("正在生成绘本...")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(Color.white.opacity(0.8))
+                                .cornerRadius(8)
+                            }
+                            
+                            if !storybookErrorMessage.isEmpty {
+                                Text(storybookErrorMessage)
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(Color.red.opacity(0.1))
+                                    .cornerRadius(8)
+                            }
+                            
+                            // 生成绘本按钮
+                            if let canvasImage = takeCanvasScreenshot() {
+                                GenerateButton(
+                                    image: canvasImage,
+                                    isLoading: $isGeneratingStorybook,
+                                    story: $storybookStory,
+                                    errorMessage: $storybookErrorMessage,
+                                    showStorybookView: $showStorybookView,
+                                    storybookData: $storybookData
+                                )
+                                .environmentObject(navigationManager)
+                                .padding(.horizontal, 20)
+                            }
+                        }
+                        .padding(.bottom, 20)
+                        
                         Spacer()
                     }
                     .frame(maxWidth: .infinity)
@@ -91,6 +195,14 @@ struct NewMainView: View {
         .navigationBarHidden(true)
         .fullScreenCover(isPresented: $showGenerationView) {
             GenerationView(image: generationImage ?? UIImage(systemName: "photo") ?? UIImage())
+        }
+        .fullScreenCover(isPresented: $showStorybookView) {
+            if let storybook = storybookData {
+                StorybookView(storybookData: storybook)
+            }
+        }
+        .sheet(isPresented: $showNetworkDiagnostic) {
+            NetworkDiagnosticView()
         }
     }
     
@@ -154,10 +266,15 @@ struct NewMainView: View {
             }
         }
         .frame(width: 800, height: 600)
-        .background(Color.white)
         
         let renderer = ImageRenderer(content: canvasContent)
-        return renderer.uiImage
+        renderer.scale = 1.0
+        
+        if let image = renderer.uiImage {
+            return image
+        }
+        
+        return nil
     }
 }
 

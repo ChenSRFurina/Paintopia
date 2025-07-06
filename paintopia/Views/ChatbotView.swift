@@ -5,26 +5,29 @@ import SwiftUI
 import AVFoundation
 
 struct ChatbotView: View {
-    @StateObject private var apiClient = ChatbotAPIClient.shared
-    @State private var messages: [EnhancedChatMessage] = []
-    @State private var isLoading: Bool = false
-    @State private var connectionStatus: String = "未连接"
-    @StateObject private var audioRecorder = AudioRecorder()
-    @State private var isUploading = false
-    @State private var recognitionError: String? = nil
-    
-    // 自动分析和提问
-    @State private var autoAnalysisTimer: Timer?
-    @State private var lastAnalysisTime: Date?
-    @State private var analysisInterval: TimeInterval = 30 // 30秒后分析
-    
-    // 引用画布数据来进行图片分析
     @Binding var canvasImage: UIImage?
     @Binding var paths: [PathSegment]
-    
     @Binding var isObservingCanvas: Bool
     
-    @State private var audioPlayer: AVAudioPlayer? = nil
+    @StateObject private var apiClient = ChatbotAPIClient.shared
+    @StateObject private var audioRecorder = AudioRecorder()
+    @EnvironmentObject var navigationManager: NavigationManager
+    
+    @State private var messages: [EnhancedChatMessage] = []
+    @State private var inputText = ""
+    @State private var isLoading = false
+    @State private var isRecording = false
+    @State private var isUploading = false
+    @State private var recognitionError: String?
+    @State private var audioPlayer: AVAudioPlayer?
+    
+    // 自动分析相关
+    @State private var autoAnalysisTimer: Timer?
+    @State private var lastAnalysisTime: Date?
+    private let analysisInterval: TimeInterval = 30.0 // 30秒间隔
+    
+    @State private var connectionStatus: String = "未连接"
+    @State private var connectionColor: Color = .gray
     
     init(canvasImage: Binding<UIImage?> = .constant(nil), paths: Binding<[PathSegment]> = .constant([]), isObservingCanvas: Binding<Bool> = .constant(false)) {
         self._canvasImage = canvasImage
@@ -255,16 +258,6 @@ struct ChatbotView: View {
     
     // MARK: - 计算属性
     
-    private var connectionColor: Color {
-        if let sessionId = apiClient.currentSessionId, !sessionId.isEmpty {
-            return .green
-        } else {
-            return .gray
-        }
-    }
-    
-    // MARK: - 核心功能
-    
     private func initializeChatbot() {
         connectionStatus = "初始化中..."
         
@@ -275,6 +268,7 @@ struct ChatbotView: View {
                 case .success(let response):
                     if response.success {
                         self.connectionStatus = "已连接"
+                        self.connectionColor = .green
                         // 添加欢迎消息
                         let welcomeMessage = EnhancedChatMessage(
                             text: response.message ?? "哈喽小朋友，我是小画！有什么想和我分享的呀？我可以看你的画哦～",
@@ -287,10 +281,12 @@ struct ChatbotView: View {
                         self.startAutoAnalysis()
                     } else {
                         self.connectionStatus = "连接失败"
+                        self.connectionColor = .gray
                         print("❌ 会话创建失败: \(response.error ?? "未知错误")")
                     }
                 case .failure(let error):
                     self.connectionStatus = "连接失败"
+                    self.connectionColor = .gray
                     print("❌ 网络连接失败: \(error.localizedDescription)")
                 }
             }
@@ -308,6 +304,7 @@ struct ChatbotView: View {
                 case .success(let response):
                     if response.success {
                         self.connectionStatus = "已连接"
+                        self.connectionColor = .green
                         // 清空消息并添加新的欢迎消息
                         self.messages.removeAll()
                         let welcomeMessage = EnhancedChatMessage(
@@ -319,15 +316,15 @@ struct ChatbotView: View {
                         self.startAutoAnalysis()
                     } else {
                         self.connectionStatus = "连接失败"
+                        self.connectionColor = .gray
                     }
                 case .failure(_):
                     self.connectionStatus = "连接失败"
+                    self.connectionColor = .gray
                 }
             }
         }
     }
-    
-
     
     // MARK: - 图像分析功能
     
@@ -391,9 +388,30 @@ struct ChatbotView: View {
                             self.messages.removeLast()
                         }
                         
+                        // 优先使用vision_desc作为回复内容，如果为空则使用llm_reply
+                        let replyText = !response.visionDesc.isEmpty ? response.visionDesc : response.llmReply
+                        
+                        // 检查回复内容是否包含错误信息
+                        let errorKeywords = ["小画需要先看看", "请截图", "看不清楚"]
+                        let containsError = errorKeywords.contains { keyword in
+                            replyText.contains(keyword)
+                        }
+                        
+                        // 如果包含错误信息，使用vision_desc或默认回复
+                        let finalReplyText: String
+                        if containsError && !response.visionDesc.isEmpty {
+                            finalReplyText = response.visionDesc
+                            print("⚠️ 检测到错误回复，使用vision_desc: \(response.visionDesc)")
+                        } else if containsError {
+                            finalReplyText = "我看到你画了一些很有趣的东西！能告诉我你在画什么吗？"
+                            print("⚠️ 检测到错误回复，使用默认回复")
+                        } else {
+                            finalReplyText = replyText
+                        }
+                        
                         // 添加AI回复消息
                         let aiMessage = EnhancedChatMessage(
-                            text: response.llmReply,
+                            text: finalReplyText,
                             isUser: false,
                             messageType: .imageAnalysis,
                             imageData: image
@@ -401,10 +419,10 @@ struct ChatbotView: View {
                         
                         self.messages.append(aiMessage)
                         
-                        // 为画布分析回复生成TTS语音
-                        if !response.llmReply.isEmpty {
-                            print("🎵 为画布分析回复生成TTS语音，文本: \(response.llmReply.prefix(50))...")
-                            self.apiClient.generateTTS(text: response.llmReply) { ttsResult in
+                        // 为画布分析回复生成TTS语音（仅在TTS启用时）
+                        if !finalReplyText.isEmpty && self.navigationManager.isTTSEnabled {
+                            print("🎵 为画布分析回复生成TTS语音，文本: \(finalReplyText.prefix(50))...")
+                            self.apiClient.generateTTS(text: finalReplyText) { ttsResult in
                                 DispatchQueue.main.async {
                                     switch ttsResult {
                                     case .success(let audioData):
@@ -415,19 +433,20 @@ struct ChatbotView: View {
                                     }
                                 }
                             }
+                        } else if !finalReplyText.isEmpty && !self.navigationManager.isTTSEnabled {
+                            print("🔇 TTS已禁用，跳过画布分析语音生成")
                         }
                         
                         // 更新最后分析时间
                         self.lastAnalysisTime = Date()
                         
                         print("✅ 画布分析完成，视觉描述: \(response.visionDesc)")
-                        print("✅ AI回复已添加到消息列表，内容: \(response.llmReply)")
+                        print("✅ AI回复已添加到消息列表，内容: \(finalReplyText)")
                         print("✅ 当前消息总数: \(self.messages.count)")
                         print("✅ 最新消息ID: \(aiMessage.id)")
                         print("✅ 最新消息类型: \(aiMessage.messageType)")
                         print("✅ 最新消息时间: \(aiMessage.timestamp)")
                         
-
                     } else {
                         let errorMessage = EnhancedChatMessage(
                             text: "抱歉，我现在看不清楚，能再试一次吗？",
@@ -614,8 +633,8 @@ struct ChatbotView: View {
                             messageType: .text
                         )
                         
-                        // 为AI回复生成TTS语音
-                        if !response.response.isEmpty {
+                        // 为AI回复生成TTS语音（仅在TTS启用时）
+                        if !response.response.isEmpty && self.navigationManager.isTTSEnabled {
                             print("🎵 为AI回复生成TTS语音，文本: \(response.response.prefix(50))...")
                             self.apiClient.generateTTS(text: response.response) { ttsResult in
                                 DispatchQueue.main.async {
@@ -628,6 +647,8 @@ struct ChatbotView: View {
                                     }
                                 }
                             }
+                        } else if !response.response.isEmpty && !self.navigationManager.isTTSEnabled {
+                            print("🔇 TTS已禁用，跳过AI回复语音生成")
                         }
                         
                         self.messages.append(aiMessage)
@@ -694,7 +715,7 @@ struct ChatbotView: View {
             return
         }
         // 回传给后端，带session_id
-        apiClient.analyzeImage(image, text: "observe_canvas") { result, rawJson in
+        apiClient.analyzeImage(image) { result, rawJson in
             DispatchQueue.main.async {
                 self.isObservingCanvas = false
                 // 回传后可自动触发分析/对话流程（如有需要）
@@ -751,8 +772,6 @@ struct EnhancedChatMessage: Identifiable {
         case error
     }
 }
-
-
 
 // MARK: - 悬浮对话气泡组件
 struct FloatingChatBubble: View {
@@ -847,7 +866,7 @@ struct FloatingChatBubble: View {
 }
 
 #Preview {
-    ChatbotView()
+    ChatbotView(canvasImage: .constant(nil), paths: .constant([]), isObservingCanvas: .constant(false))
         .padding()
         .background(Color.gray.opacity(0.1))
 } 
